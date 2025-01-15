@@ -21,12 +21,12 @@ class AlgoritmoGenetico:
             'button_hover': '#3498DB'   
         }
         
-        self.funcion_str = tk.StringVar(value="x*sin(x)*cos(x)")
-        self.rango_min = tk.DoubleVar(value=-100)
-        self.rango_max = tk.DoubleVar(value=200)
-        self.delta_x = tk.DoubleVar(value=0.01)
+        self.funcion_str = tk.StringVar(value="0.1*x*log(1 + abs(x))*cos(x)*cos(x)")
+        self.rango_min = tk.DoubleVar(value=5)
+        self.rango_max = tk.DoubleVar(value=10)
+        self.delta_x = tk.DoubleVar(value=0.1)
         self.prob_cruza = tk.DoubleVar(value=0.8)
-        self.prob_mutacion = tk.DoubleVar(value=0.1)
+        self.prob_mutacion = tk.DoubleVar(value=0.6)
         self.tam_poblacion = tk.IntVar(value=100)
         self.num_generaciones = tk.IntVar(value=50)
         
