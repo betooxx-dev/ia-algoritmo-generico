@@ -129,11 +129,9 @@ class AlgoritmoGenetico:
         results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
         
-        # Crear frame para la gráfica
         self.graph_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         self.graph_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=20)
         
-        # Crear figura de matplotlib
         self.fig = Figure(figsize=(8, 4))
         self.ax = self.fig.add_subplot(111)
         
@@ -196,43 +194,35 @@ class AlgoritmoGenetico:
                 text="Evolución de Generaciones",
                 style='Title.TLabel').grid(row=0, column=0, pady=(0, 15))
         
-        # Crear Treeview para la tabla
         self.tree = ttk.Treeview(results_frame, columns=("gen", "mejor_x", "mejor_fx", "peor_x", "peor_fx"), 
                                 show="headings", height=15)
         
-        # Configurar columnas
         self.tree.heading("gen", text="Generación")
         self.tree.heading("mejor_x", text="Mejor X")
         self.tree.heading("mejor_fx", text="Mejor f(x)")
         self.tree.heading("peor_x", text="Peor X")
         self.tree.heading("peor_fx", text="Peor f(x)")
         
-        # Configurar anchos de columna
         self.tree.column("gen", width=80)
         self.tree.column("mejor_x", width=100)
         self.tree.column("mejor_fx", width=100)
         self.tree.column("peor_x", width=100)
         self.tree.column("peor_fx", width=100)
         
-        # Añadir scrollbar horizontal
         xscrollbar = ttk.Scrollbar(results_frame, orient="horizontal", command=self.tree.xview)
         self.tree.configure(xscrollcommand=xscrollbar.set)
         
-        # Colocar elementos en la cuadrícula
         self.tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         xscrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
     
     def graficar_funcion(self):
         self.ax.clear()
         
-        # Generar puntos para la gráfica
         x = np.linspace(self.x_min, self.x_max, 1000)
         y = np.array([self.funcion(xi) for xi in x])
         
-        # Graficar la función
         self.ax.plot(x, y, 'b-', label='f(x)')
         
-        # Graficar puntos máximo y mínimo
         if self.mejor_x is not None and self.peor_x is not None:
             self.ax.plot(self.mejor_x, self.mejor_y, 'go', label='Máximo', markersize=10)
             self.ax.plot(self.peor_x, self.peor_y, 'ro', label='Mínimo', markersize=10)
@@ -243,7 +233,6 @@ class AlgoritmoGenetico:
         self.ax.grid(True)
         self.ax.legend()
         
-        # Actualizar canvas
         self.canvas.draw()
         
     def validar_parametros(self):
@@ -262,7 +251,6 @@ class AlgoritmoGenetico:
             if self.num_generaciones.get() <= 0:
                 raise ValueError("El número de generaciones debe ser mayor que 0")
                 
-            # Validar y compilar la función
             self.compile_function()
             return True
         except tk.TclError:
@@ -276,18 +264,14 @@ class AlgoritmoGenetico:
         allowed_funcs = ['sin', 'cos', 'tan', 'exp', 'log', 'sqrt']
         allowed_ops = ['+', '-', '*', '/', '^', '(', ')', '.']
         
-        # Reemplazar x con 1 para probar
         test_expr = expr.replace('x', '1')
         
-        # Reemplazar ^ por ** para potencias
         test_expr = test_expr.replace('^', '**')
         
-        # Reemplazar funciones matemáticas con math.función
         for func in allowed_funcs:
             test_expr = test_expr.replace(func, f'math.{func}')
         
         try:
-            # Intentar evaluar la expresión
             result = eval(test_expr)
             return True
         except:
@@ -298,14 +282,11 @@ class AlgoritmoGenetico:
         if not expr or not self.validate_math_expression(expr):
             raise ValueError("Función matemática inválida")
             
-        # Reemplazar ^ por ** para potencias
         expr = expr.replace('^', '**')
         
-        # Reemplazar funciones trigonométricas con math.función
         for func in ['sin', 'cos', 'tan', 'exp', 'log', 'sqrt']:
             expr = expr.replace(func, f'math.{func}')
         
-        # Crear y probar la función lambda
         try:
             test_func = lambda x: eval(expr)
             test_value = test_func(0)  # Probar con un valor
@@ -318,16 +299,12 @@ class AlgoritmoGenetico:
         self.x_max = self.rango_max.get()
         self.dx = self.delta_x.get()
         
-        # Calcular número de puntos
         self.n_puntos = int((self.x_max - self.x_min) / self.dx + 1)
         
-        # Calcular número de bits necesarios
         self.n_bits = math.ceil(math.log2(self.n_puntos))
         
-        # Calcular el nuevo delta_x del sistema (más pequeño que el original)
         self.dx_sistema = (self.x_max - self.x_min) / (2**self.n_bits - 1)
         
-        # Actualizar resultados en la interfaz
         self.resultado_text.insert(tk.END, f"Parámetros de codificación:\n")
         self.resultado_text.insert(tk.END, f"Número de puntos originales: {self.n_puntos}\n")
         self.resultado_text.insert(tk.END, f"Número de bits necesarios: {self.n_bits}\n")
@@ -341,7 +318,6 @@ class AlgoritmoGenetico:
         if not self.validar_parametros():
             return
         
-         # Limpiar la tabla y textos
         for item in self.tree.get_children():
             self.tree.delete(item)
                         
@@ -349,7 +325,6 @@ class AlgoritmoGenetico:
         self.detalles_text.delete(1.0, tk.END)  
         self.calcular_parametros()
         
-        # Iniciar proceso de optimización
         poblacion = self.inicializar_poblacion()
         mejor_solucion = None
         peor_solucion = None
@@ -359,7 +334,6 @@ class AlgoritmoGenetico:
             nueva_poblacion = self.reproducir(mejores)
             poblacion = self.mutar(nueva_poblacion)
             
-            # Actualizar mejor y peor solución
             actual = self.obtener_mejor_y_peor(poblacion)
             mejor_actual, peor_actual = actual
             
@@ -369,10 +343,8 @@ class AlgoritmoGenetico:
             if peor_solucion is None or self.fitness(peor_actual) < self.fitness(peor_solucion):
                 peor_solucion = peor_actual
             
-            # Mostrar progreso para cada generación
             self.mostrar_progreso(generacion, mejor_actual, peor_actual)
         
-        # Actualizar valores para la gráfica
         mejor_decimal = int(mejor_solucion, 2)
         peor_decimal = int(peor_solucion, 2)
         
@@ -392,10 +364,8 @@ class AlgoritmoGenetico:
             f"Binario: {mejor_solucion}\n"
         )
         
-        # Graficar resultados
         self.graficar_funcion()
         
-        # Imprimir resultados en consola
         print("\nResultados finales:")
         print(f"Punto máximo: ({self.mejor_x:.4f}, {self.mejor_y:.4f})")
         print(f"Punto mínimo: ({self.peor_x:.4f}, {self.peor_y:.4f})")
@@ -416,7 +386,6 @@ class AlgoritmoGenetico:
         mejor_fitness = self.fitness(mejor_solucion)
         peor_fitness = self.fitness(peor_solucion)
         
-        # Insertar datos en la tabla
         self.tree.insert("", "end", values=(
             generacion,
             f"{mejor_x:.4f}",
@@ -425,13 +394,11 @@ class AlgoritmoGenetico:
             f"{peor_fitness:.4f}"
         ))
         
-        # Asegurar que la última fila sea visible
         self.tree.yview_moveto(1)
     
     def inicializar_poblacion(self):
         poblacion = []
         for _ in range(self.tam_poblacion.get()):
-            # Crear individuo como cadena binaria aleatoria
             individuo = ''.join(np.random.choice(['0', '1']) for _ in range(self.n_bits))
             poblacion.append(individuo)
         return poblacion
@@ -442,50 +409,37 @@ class AlgoritmoGenetico:
     
     def seleccionar_mejores(self, poblacion):
         """Selecciona los mejores individuos para reproducción"""
-        # Evaluar fitness de toda la población
         fitness_valores = self.evaluar_fitness(poblacion)
-        # Ordenar por fitness de mayor a menor
         poblacion_ordenada = [ind for ind, _ in sorted(fitness_valores, key=lambda x: x[1], reverse=True)]
-        # Seleccionar el 50% superior
         n_seleccionados = max(2, len(poblacion) // 2)
         return poblacion_ordenada[:n_seleccionados]
         
     def reproducir(self, poblacion):
-        # Evaluar el fitness de cada individuo y ordenarlos de mejor a peor
         fitness_valores = [(individuo, self.fitness(individuo)) for individuo in poblacion]
         poblacion_ordenada = [ind for ind, _ in sorted(fitness_valores, key=lambda x: x[1], reverse=True)]
         
         parejas = []
         nueva_poblacion = []
         
-        # Para cada individuo i, evaluar si se cruza
         for i in range(len(poblacion_ordenada)):
-            # Generar número aleatorio para decidir si el individuo i se cruza
             p = np.random.random()
             
-            # Si p es menor o igual a la probabilidad de cruza, seleccionar pareja
             if p <= self.prob_cruza.get():
-                # Seleccionar aleatoriamente un individuo j entre los mejores (0 hasta i)
                 j = np.random.randint(0, i+1)
                 parejas.append((i, j))
                 
-                # Realizar la cruza entre los individuos i y j
                 padre1 = poblacion_ordenada[i]
                 padre2 = poblacion_ordenada[j]
                 
-                # Seleccionar un punto de cruza aleatorio
                 punto_cruza = np.random.randint(1, self.n_bits)
                 
-                # Crear hijos intercambiando segmentos
                 hijo1 = padre1[:punto_cruza] + padre2[punto_cruza:]
                 hijo2 = padre2[:punto_cruza] + padre1[punto_cruza:]
                 
                 nueva_poblacion.extend([hijo1, hijo2])
             else:
-                # Si no se cruza, el individuo pasa directamente a la siguiente generación
                 nueva_poblacion.append(poblacion_ordenada[i])
         
-        # Asegurar que la nueva población tenga el mismo tamaño que la original
         while len(nueva_poblacion) > len(poblacion):
             nueva_poblacion.pop()
         
@@ -493,7 +447,6 @@ class AlgoritmoGenetico:
             idx = np.random.randint(0, len(nueva_poblacion))
             nueva_poblacion.append(nueva_poblacion[idx])
         
-        # Mostrar información sobre el proceso de cruza
         self.resultado_text.insert(tk.END, f"\nProceso de cruza:")
         self.resultado_text.insert(tk.END, f"\nNúmero de parejas formadas: {len(parejas)}")
         self.resultado_text.insert(tk.END, f"\nTamaño de la nueva población: {len(nueva_poblacion)}\n")
@@ -506,32 +459,24 @@ class AlgoritmoGenetico:
         total_bits_mutados = 0
         
         for individuo in poblacion:
-            # Decidir si el individuo muta
             p_individuo = np.random.random()
             
             if p_individuo <= self.prob_mutacion.get():
-                # El individuo fue seleccionado para mutar
-                nuevo_individuo = list(individuo)  # Convertir a lista para poder modificar
+                nuevo_individuo = list(individuo)  
                 
-                # Para cada bit del individuo
                 for i in range(self.n_bits):
-                    # Decidir si este bit específico muta
                     p_bit = np.random.random()
                     
                     if p_bit <= self.prob_mutacion.get():
-                        # Complementar el bit (cambiar 0 por 1 o 1 por 0)
                         nuevo_individuo[i] = '1' if nuevo_individuo[i] == '0' else '0'
                         total_bits_mutados += 1
                 
-                # Convertir de vuelta a string
                 nuevo_individuo = ''.join(nuevo_individuo)
                 total_mutaciones += 1
                 poblacion_mutada.append(nuevo_individuo)
             else:
-                # El individuo no muta, pasa sin cambios
                 poblacion_mutada.append(individuo)
         
-        # Registrar información sobre el proceso de mutación
         self.resultado_text.insert(tk.END, f"\nProceso de mutación:")
         self.resultado_text.insert(tk.END, f"\nIndividuos mutados: {total_mutaciones}")
         self.resultado_text.insert(tk.END, f"\nTotal de bits mutados: {total_bits_mutados}")
