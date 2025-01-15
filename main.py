@@ -63,7 +63,7 @@ class AlgoritmoGenetico:
         
         style.configure('Custom.TButton',
                        background=self.colors['button'],
-                       foreground='white',
+                       foreground='black',
                        padding=(20, 10),
                        font=('Segoe UI', 10, 'bold'))
         
@@ -141,6 +141,17 @@ class AlgoritmoGenetico:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
+        self.detalles_text = tk.Text(self.graph_frame,
+                            height=6,
+                            width=80,
+                            font=('Consolas', 10),
+                            bg='white',
+                            fg=self.colors['text'],
+                            wrap=tk.WORD,
+                            borderwidth=1,
+                            relief="solid")
+        self.detalles_text.pack(fill=tk.X, expand=True, pady=(10, 0))
+        
         ttk.Label(results_frame,
                  text="Resultados de la Optimización",
                  style='Title.TLabel').grid(row=0, column=0, pady=(0, 15))
@@ -172,7 +183,10 @@ class AlgoritmoGenetico:
         clear_button = ttk.Button(btn_frame,
                                 text="Limpiar Resultados",
                                 style='Custom.TButton',
-                                command=lambda: self.resultado_text.delete(1.0, tk.END))
+                                command=lambda:(
+                                    self.resultado_text.delete(1.0, tk.END),
+                                    self.detalles_text.delete(1.0, tk.END)
+                                    ))
         clear_button.grid(row=0, column=1, padx=5)
         
         results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
@@ -323,16 +337,16 @@ class AlgoritmoGenetico:
         if self.dx_sistema < self.dx:
             self.resultado_text.insert(tk.END, f"¡Mejora en la precisión! El nuevo Delta X es {self.dx/self.dx_sistema:.2f} veces más pequeño\n")
 
-    
     def iniciar_optimizacion(self):
         if not self.validar_parametros():
             return
         
-         # Limpiar la tabla
+         # Limpiar la tabla y textos
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
+                        
         self.resultado_text.delete(1.0, tk.END)
+        self.detalles_text.delete(1.0, tk.END)  
         self.calcular_parametros()
         
         # Iniciar proceso de optimización
@@ -366,6 +380,17 @@ class AlgoritmoGenetico:
         self.mejor_y = self.fitness(mejor_solucion)
         self.peor_x = self.x_min + peor_decimal * self.dx_sistema
         self.peor_y = self.fitness(peor_solucion)
+        
+        self.detalles_text.delete(1.0, tk.END)
+        self.detalles_text.insert(tk.END, 
+            f"Puntos iniciales: {self.n_puntos}\n"
+            f"Puntos optimizados: {2**self.n_bits}\n"
+            f"Delta inicial: {self.dx}\n"
+            f"Delta optimizada: {self.dx_sistema}\n"
+            f"Proporción de mejora: {self.dx/self.dx_sistema:.2f}x\n"
+            f"Mejor solución -> X: {self.mejor_x:.6f}, f(x): {self.mejor_y:.6f}, "
+            f"Binario: {mejor_solucion}\n"
+        )
         
         # Graficar resultados
         self.graficar_funcion()
