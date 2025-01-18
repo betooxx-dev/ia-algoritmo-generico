@@ -1,5 +1,3 @@
-import math
-
 def validate_math_expression(expr):
     allowed_funcs = ['sin', 'cos', 'tan', 'exp', 'log', 'sqrt']
     
@@ -31,7 +29,7 @@ def compile_function(expr):
     except Exception as e:
         raise ValueError(f"Error compiling function: {str(e)}")
 
-def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, min_population, max_population, generations):
+def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, mutation_bits_prob, min_population, max_population, generations):
     if x_min >= x_max:
         raise ValueError("El rango mínimo debe ser menor que el máximo")
     if dx <= 0:
@@ -40,6 +38,8 @@ def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, min_pop
         raise ValueError("La probabilidad de cruza debe estar entre 0 y 1")
     if not 0 <= mutation_prob <= 1:
         raise ValueError("La probabilidad de mutación debe estar entre 0 y 1")
+    if not 0 <= mutation_bits_prob <= 1:
+        raise ValueError("La probabilidad de mutación de bits debe estar entre 0 y 1")
     if min_population <= 0:
         raise ValueError("La población mínima debe ser mayor que 0")
     if max_population <= min_population:

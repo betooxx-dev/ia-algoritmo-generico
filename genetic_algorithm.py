@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 class GeneticAlgorithm:
-    def __init__(self, function, x_min, x_max, dx, min_population, max_population, generations, crossover_prob, mutation_prob):
+    def __init__(self, function, x_min, x_max, dx, min_population, max_population, generations, crossover_prob, mutation_prob, bit_mutation_prob):
         self.function = function
         self.x_min = x_min
         self.x_max = x_max
@@ -13,6 +13,7 @@ class GeneticAlgorithm:
         self.generations = generations
         self.crossover_prob = crossover_prob
         self.mutation_prob = mutation_prob
+        self.bit_mutation_prob = bit_mutation_prob
         self.setup_parameters()
 
     def setup_parameters(self):
@@ -75,19 +76,20 @@ class GeneticAlgorithm:
         total_mutated_bits = 0
         
         for individual in population:
+            mutated_individual = list(individual)
+            individual_mutated = False
+            
             if np.random.random() <= self.mutation_prob:
-                new_individual = list(individual)
-                
                 for i in range(self.n_bits):
-                    if np.random.random() <= self.mutation_prob:
-                        new_individual[i] = '1' if new_individual[i] == '0' else '0'
+                    if np.random.random() <= self.bit_mutation_prob:
+                        mutated_individual[i] = '1' if mutated_individual[i] == '0' else '0'
                         total_mutated_bits += 1
+                        individual_mutated = True
                 
-                new_individual = ''.join(new_individual)
-                total_mutations += 1
-                mutated_population.append(new_individual)
-            else:
-                mutated_population.append(individual)
+                if individual_mutated:
+                    total_mutations += 1
+            
+            mutated_population.append(''.join(mutated_individual))
         
         return mutated_population, total_mutations, total_mutated_bits
 

@@ -13,7 +13,7 @@ class GUI:
     def __init__(self):
         self.window = ThemedTk(theme="arc")
         self.window.title("Algoritmo Genético - Optimización")
-        self.window.geometry("1300x1200")
+        self.window.geometry("1350x1400")
         
         self.colors = {
             'bg': '#F5F5F5',           
@@ -30,6 +30,7 @@ class GUI:
         self.delta_x = tk.DoubleVar(value=0.1)
         self.prob_cruza = tk.DoubleVar(value=0.8)
         self.prob_mutacion = tk.DoubleVar(value=0.6)
+        self.prob_mutacion_bits = tk.DoubleVar(value=0.1)  
         self.poblacion_min = tk.IntVar(value=50)  
         self.poblacion_max = tk.IntVar(value=100)  
         self.num_generaciones = tk.IntVar(value=50)
@@ -99,6 +100,7 @@ class GUI:
             ("Delta X (margen de error):", self.delta_x),
             ("Probabilidad de cruza:", self.prob_cruza),
             ("Probabilidad de mutación:", self.prob_mutacion),
+            ("Probabilidad de mutación de bits:", self.prob_mutacion_bits),  
             ("Población mínima:", self.poblacion_min),
             ("Población máxima:", self.poblacion_max),
             ("Número de generaciones:", self.num_generaciones)
@@ -299,6 +301,7 @@ class GUI:
                 self.delta_x.get(),
                 self.prob_cruza.get(),
                 self.prob_mutacion.get(),
+                self.prob_mutacion_bits.get(),  
                 self.poblacion_min.get(),  
                 self.poblacion_max.get(),  
                 self.num_generaciones.get()
@@ -315,7 +318,8 @@ class GUI:
                 self.poblacion_max.get(),  
                 self.num_generaciones.get(),
                 self.prob_cruza.get(),
-                self.prob_mutacion.get()
+                self.prob_mutacion.get(),
+                self.prob_mutacion_bits.get()  
             )
             
             self.resultado_text.insert(tk.END, f"Parámetros de codificación:\n")
