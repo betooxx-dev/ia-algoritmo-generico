@@ -13,15 +13,29 @@ class VideoHandler:
         self.width = 640
         self.height = 480
         
-    def create_frame(self, x_data, y_data, generation, title):
+    def create_frame(self, x_values, fitness_values, generation, best_x=None, best_fx=None):
         fig = Figure(figsize=(8, 6), dpi=80)
         ax = fig.add_subplot(111)
         
-        ax.plot(x_data, y_data, 'b-')
-        ax.set_title(f'{title} - Generación {generation}')
+        # Ordenar los valores para el gráfico
+        sorted_pairs = sorted(zip(x_values, fitness_values))
+        x_sorted, y_sorted = zip(*sorted_pairs)
+        
+        # Graficar la población actual
+        ax.scatter(x_values, fitness_values, c='blue', alpha=0.5, s=20, label='Población')
+        
+        # Si tenemos el mejor punto, lo marcamos
+        if best_x is not None and best_fx is not None:
+            ax.scatter([best_x], [best_fx], c='red', s=100, label='Mejor')
+        
+        ax.set_title(f'Generación {generation}')
         ax.set_xlabel('x')
         ax.set_ylabel('f(x)')
         ax.grid(True)
+        ax.legend()
+        
+        ax.set_ylim(min(fitness_values) - abs(min(fitness_values))*0.1, 
+                   max(fitness_values) + abs(max(fitness_values))*0.1)
         
         canvas = FigureCanvasAgg(fig)
         canvas.draw()

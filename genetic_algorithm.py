@@ -30,6 +30,15 @@ class GeneticAlgorithm:
         x = self.x_min + decimal * self.dx_system
         return self.function(x)
 
+    def get_population_stats(self, population):
+        x_values = []
+        fitness_values = []
+        for individual in population:
+            x, fx = self.decode_solution(individual)
+            x_values.append(x)
+            fitness_values.append(fx)
+        return x_values, fitness_values
+
     def select_best(self, population):
         fitness_values = [(individual, self.fitness(individual)) for individual in population]
         population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]

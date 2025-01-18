@@ -1,5 +1,6 @@
 from genetic_algorithm import GeneticAlgorithm
 from utils import compile_function, validate_parameters
+from video_handler import VideoHandler
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -333,11 +334,30 @@ class GUI:
                 self.resultado_text.insert(tk.END, 
                     f"¡Mejora en la precisión! El nuevo Delta X es {ga.dx/ga.dx_system:.2f} veces más pequeño\n")
             
+            video_handler = VideoHandler()
+            
             population = ga.initialize_population()
             best_solution = None
             worst_solution = None
             
             for generation in range(self.num_generaciones.get()):
+                x_values, fitness_values = ga.get_population_stats(population)
+                
+                current_best, _ = ga.get_best_and_worst(population)
+                current_x, current_fx = ga.decode_solution(current_best)                
+                
+                if best_solution is None or ga.fitness(current_best) > ga.fitness(best_solution):
+                    best_solution = current_best
+                    best_x, best_fx = current_x, current_fx
+            
+                video_handler.create_frame(
+                    x_values,
+                    fitness_values,
+                    generation,
+                    best_x,
+                    best_fx
+                )
+            
                 fitness_values = [ga.fitness(ind) for ind in population]
                 best_fitness = max(fitness_values)
                 avg_fitness = sum(fitness_values) / len(fitness_values)
@@ -370,6 +390,8 @@ class GUI:
                 f"Número de bits: {ga.n_bits}\n"
                 f"Representación binaria: {best_solution}\n"
             )
+            
+            video_handler.save_video()
             
             self.plot_function()
             self.plot_fitness()

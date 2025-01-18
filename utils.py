@@ -1,3 +1,5 @@
+import math
+
 def validate_math_expression(expr):
     allowed_funcs = ['sin', 'cos', 'tan', 'exp', 'log', 'sqrt']
     
