@@ -31,7 +31,7 @@ def compile_function(expr):
     except Exception as e:
         raise ValueError(f"Error compiling function: {str(e)}")
 
-def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, population_size, generations):
+def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, min_population, max_population, generations):
     if x_min >= x_max:
         raise ValueError("El rango mínimo debe ser menor que el máximo")
     if dx <= 0:
@@ -40,8 +40,10 @@ def validate_parameters(x_min, x_max, dx, crossover_prob, mutation_prob, populat
         raise ValueError("La probabilidad de cruza debe estar entre 0 y 1")
     if not 0 <= mutation_prob <= 1:
         raise ValueError("La probabilidad de mutación debe estar entre 0 y 1")
-    if population_size <= 0:
-        raise ValueError("El tamaño de la población debe ser mayor que 0")
+    if min_population <= 0:
+        raise ValueError("La población mínima debe ser mayor que 0")
+    if max_population <= min_population:
+        raise ValueError("La población máxima debe ser mayor que la población mínima")
     if generations <= 0:
         raise ValueError("El número de generaciones debe ser mayor que 0")
-    return True 
+    return True

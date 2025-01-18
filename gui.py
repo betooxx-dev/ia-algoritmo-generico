@@ -13,7 +13,7 @@ class GUI:
     def __init__(self):
         self.window = ThemedTk(theme="arc")
         self.window.title("Algoritmo Genético - Optimización")
-        self.window.geometry("1000x1200")
+        self.window.geometry("1300x1200")
         
         self.colors = {
             'bg': '#F5F5F5',           
@@ -30,7 +30,8 @@ class GUI:
         self.delta_x = tk.DoubleVar(value=0.1)
         self.prob_cruza = tk.DoubleVar(value=0.8)
         self.prob_mutacion = tk.DoubleVar(value=0.6)
-        self.tam_poblacion = tk.IntVar(value=100)
+        self.poblacion_min = tk.IntVar(value=50)  
+        self.poblacion_max = tk.IntVar(value=100)  
         self.num_generaciones = tk.IntVar(value=50)
         
         self.funcion = None
@@ -45,7 +46,6 @@ class GUI:
         self.start_interface()
         
     def styles(self):
-        """Configura los estilos personalizados para la interfaz"""
         style = ttk.Style()
         
         style.configure('Custom.TFrame', background=self.colors['frame_bg'])
@@ -79,11 +79,13 @@ class GUI:
         self.window.grid_rowconfigure(0, weight=1)
         self.window.grid_columnconfigure(0, weight=1)
         
+        # Título
         title_label = ttk.Label(main_frame, 
                                text="Algoritmo Genético - Optimización",
                                style='Title.TLabel')
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
         
+        # Frame de parámetros
         params_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         params_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
         
@@ -97,7 +99,8 @@ class GUI:
             ("Delta X (margen de error):", self.delta_x),
             ("Probabilidad de cruza:", self.prob_cruza),
             ("Probabilidad de mutación:", self.prob_mutacion),
-            ("Tamaño de población:", self.tam_poblacion),
+            ("Población mínima:", self.poblacion_min),
+            ("Población máxima:", self.poblacion_max),
             ("Número de generaciones:", self.num_generaciones)
         ]
         
@@ -110,15 +113,6 @@ class GUI:
                     width=20,
                     style='Custom.TEntry')
             entry.grid(row=i+1, column=1, padx=(15, 0), pady=8)
-            
-            ttk.Label(params_frame, 
-                text=label_text,
-                style='Custom.TLabel').grid(row=i+1, column=0, sticky=tk.W, pady=8)
-            entry = ttk.Entry(params_frame,
-                            textvariable=variable,
-                            width=20,
-                            style='Custom.TEntry')
-            entry.grid(row=i+1, column=1, padx=(15, 0), pady=8)
         
         ttk.Label(params_frame, 
             text="Función a optimizar:",
@@ -129,67 +123,7 @@ class GUI:
             style='Custom.TEntry')
         entry.grid(row=len(parametros)+1, column=1, padx=(15, 0), pady=8)
         
-        results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
-        results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
-        
-        self.graph_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
-        self.graph_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=20)
-        
-        self.fig = Figure(figsize=(8, 4))
-        self.ax = self.fig.add_subplot(111)
-        
-        # Crear canvas
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        self.detalles_text = tk.Text(self.graph_frame,
-                            height=6,
-                            width=80,
-                            font=('Consolas', 10),
-                            bg='white',
-                            fg=self.colors['text'],
-                            wrap=tk.WORD,
-                            borderwidth=1,
-                            relief="solid")
-        self.detalles_text.pack(fill=tk.X, expand=True, pady=(10, 0))
-        
-        ttk.Label(results_frame,
-                 text="Resultados de la Optimización",
-                 style='Title.TLabel').grid(row=0, column=0, pady=(0, 15))
-        
-        self.resultado_text = tk.Text(results_frame,
-                                    height=15,
-                                    width=40,
-                                    font=('Consolas', 10),
-                                    bg='white',
-                                    fg=self.colors['text'],
-                                    wrap=tk.WORD,
-                                    borderwidth=1,
-                                    relief="solid")
-        self.resultado_text.grid(row=1, column=0, pady=(0, 15))
-        
-        scrollbar = ttk.Scrollbar(results_frame, orient="vertical", command=self.resultado_text.yview)
-        scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
-        self.resultado_text.configure(yscrollcommand=scrollbar.set)
-        
-        btn_frame = ttk.Frame(main_frame, style='Custom.TFrame')
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=20)
-        
-        start_button = ttk.Button(btn_frame,
-                                text="Iniciar Optimización",
-                                style='Custom.TButton',
-                                command=self.iniciar_optimizacion)
-        start_button.grid(row=0, column=0, padx=5)
-        
-        clear_button = ttk.Button(btn_frame,
-                                text="Limpiar Resultados",
-                                style='Custom.TButton',
-                                command=lambda:(
-                                    self.resultado_text.delete(1.0, tk.END),
-                                    self.detalles_text.delete(1.0, tk.END)
-                                    ))
-        clear_button.grid(row=0, column=1, padx=5)
-        
+        # Frame de resultados
         results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
         
@@ -212,34 +146,132 @@ class GUI:
         self.tree.column("peor_x", width=100)
         self.tree.column("peor_fx", width=100)
         
+        self.tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
         xscrollbar = ttk.Scrollbar(results_frame, orient="horizontal", command=self.tree.xview)
         self.tree.configure(xscrollcommand=xscrollbar.set)
-        
-        self.tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         xscrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
+        
+        # Frame de texto de resultados
+        text_frame = ttk.Frame(results_frame, style='Custom.TFrame')
+        text_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(15, 0))
+        
+        self.resultado_text = tk.Text(text_frame,
+                                    height=8,
+                                    width=40,
+                                    font=('Consolas', 10),
+                                    bg='white',
+                                    fg=self.colors['text'],
+                                    wrap=tk.WORD,
+                                    borderwidth=1,
+                                    relief="solid")
+        self.resultado_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=self.resultado_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.resultado_text.configure(yscrollcommand=scrollbar.set)
+        
+        # Frame de botones
+        btn_frame = ttk.Frame(main_frame, style='Custom.TFrame')
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=20)
+        
+        start_button = ttk.Button(btn_frame,
+                                text="Iniciar Optimización",
+                                style='Custom.TButton',
+                                command=self.iniciar_optimizacion)
+        start_button.grid(row=0, column=0, padx=5)
+        
+        clear_button = ttk.Button(btn_frame,
+                                text="Limpiar Resultados",
+                                style='Custom.TButton',
+                                command=lambda:(
+                                    self.resultado_text.delete(1.0, tk.END),
+                                    self.detalles_text.delete(1.0, tk.END),
+                                    [self.tree.delete(item) for item in self.tree.get_children()]
+                                ))
+        clear_button.grid(row=0, column=1, padx=5)
+        
+        # Frame de gráficas
+        self.graph_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
+        self.graph_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=20)
+        
+        # Frame para contener ambas gráficas
+        self.plots_frame = ttk.Frame(self.graph_frame, style='Custom.TFrame')
+        self.plots_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Frame para la gráfica de la función
+        self.function_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
+        self.function_frame.grid(row=0, column=0, padx=5)
+        
+        # Frame para la gráfica de fitness
+        self.fitness_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
+        self.fitness_frame.grid(row=0, column=1, padx=5)
+        
+        # Configurar la gráfica de la función
+        self.fig_function = Figure(figsize=(6, 4))
+        self.ax_function = self.fig_function.add_subplot(111)
+        self.canvas_function = FigureCanvasTkAgg(self.fig_function, master=self.function_frame)
+        self.canvas_function.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Configurar la gráfica de fitness
+        self.fig_fitness = Figure(figsize=(6, 4))
+        self.ax_fitness = self.fig_fitness.add_subplot(111)
+        self.canvas_fitness = FigureCanvasTkAgg(self.fig_fitness, master=self.fitness_frame)
+        self.canvas_fitness.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Texto de detalles
+        self.detalles_text = tk.Text(self.graph_frame,
+                            height=6,
+                            width=80,
+                            font=('Consolas', 10),
+                            bg='white',
+                            fg=self.colors['text'],
+                            wrap=tk.WORD,
+                            borderwidth=1,
+                            relief="solid")
+        self.detalles_text.pack(fill=tk.X, expand=True, pady=(10, 0))
     
     def plot_function(self):
-        self.ax.clear()
+        self.ax_function.clear()
         
         x = np.linspace(self.rango_min.get(), self.rango_max.get(), 1000)
         y = np.array([self.funcion(xi) for xi in x])
         
-        self.ax.plot(x, y, 'b-', label='f(x)')
+        self.ax_function.plot(x, y, 'b-', label='f(x)')
         
         if self.mejor_x is not None and self.peor_x is not None:
-            self.ax.plot(self.mejor_x, self.mejor_y, 'go', label='Máximo', markersize=10)
-            self.ax.plot(self.peor_x, self.peor_y, 'ro', label='Mínimo', markersize=10)
+            self.ax_function.plot(self.mejor_x, self.mejor_y, 'go', label='Máximo', markersize=10)
+            self.ax_function.plot(self.peor_x, self.peor_y, 'ro', label='Mínimo', markersize=10)
         
-        self.ax.set_title('Función y Puntos Óptimos')
-        self.ax.set_xlabel('x')
-        self.ax.set_ylabel('f(x)')
-        self.ax.grid(True)
-        self.ax.legend()
+        self.ax_function.set_title('Función y Puntos Óptimos')
+        self.ax_function.set_xlabel('x')
+        self.ax_function.set_ylabel('f(x)')
+        self.ax_function.grid(True)
+        self.ax_function.legend()
         
-        self.canvas.draw()
+        self.canvas_function.draw()
+    
+    def plot_fitness(self):
+        self.ax_fitness.clear()
+        
+        generations = list(range(len(self.fitness_history)))
+        best_fitness = [f[0] for f in self.fitness_history]
+        avg_fitness = [f[1] for f in self.fitness_history]
+        worst_fitness = [f[2] for f in self.fitness_history]
+        
+        self.ax_fitness.plot(generations, best_fitness, 'g-', label='Mejor Fitness')
+        self.ax_fitness.plot(generations, avg_fitness, 'b-', label='Fitness Promedio')
+        self.ax_fitness.plot(generations, worst_fitness, 'r-', label='Peor Fitness')
+        
+        self.ax_fitness.set_title('Evolución del Fitness')
+        self.ax_fitness.set_xlabel('Generación')
+        self.ax_fitness.set_ylabel('Valor de Fitness')
+        self.ax_fitness.grid(True)
+        self.ax_fitness.legend()
+        
+        self.canvas_fitness.draw()
         
     def mostrar_progreso(self, generacion, mejor_solucion, peor_solucion, ga):
-        """Actualiza la interfaz con el progreso de la optimización"""
         mejor_x, mejor_y = ga.decode_solution(mejor_solucion)
         peor_x, peor_y = ga.decode_solution(peor_solucion)
         
@@ -252,42 +284,40 @@ class GUI:
         ))
         
         self.tree.yview_moveto(1)
+    
     def iniciar_optimizacion(self):
-        """Inicia el proceso de optimización"""
         try:
-            # Limpiar resultados anteriores
             for item in self.tree.get_children():
                 self.tree.delete(item)
             self.resultado_text.delete(1.0, tk.END)
             self.detalles_text.delete(1.0, tk.END)
+            self.fitness_history = []
 
-            # Validar parámetros
             validate_parameters(
                 self.rango_min.get(),
                 self.rango_max.get(),
                 self.delta_x.get(),
                 self.prob_cruza.get(),
                 self.prob_mutacion.get(),
-                self.tam_poblacion.get(),
+                self.poblacion_min.get(),  
+                self.poblacion_max.get(),  
                 self.num_generaciones.get()
             )
             
-            # Compilar función
             self.funcion = compile_function(self.funcion_str.get())
             
-            # Crear instancia del algoritmo genético
             ga = GeneticAlgorithm(
                 self.funcion,
                 self.rango_min.get(),
                 self.rango_max.get(),
                 self.delta_x.get(),
-                self.tam_poblacion.get(),
+                self.poblacion_min.get(),  
+                self.poblacion_max.get(),  
                 self.num_generaciones.get(),
                 self.prob_cruza.get(),
                 self.prob_mutacion.get()
             )
             
-            # Mostrar parámetros de codificación
             self.resultado_text.insert(tk.END, f"Parámetros de codificación:\n")
             self.resultado_text.insert(tk.END, f"Número de puntos originales: {ga.n_points}\n")
             self.resultado_text.insert(tk.END, f"Número de bits necesarios: {ga.n_bits}\n")
@@ -299,16 +329,23 @@ class GUI:
                 self.resultado_text.insert(tk.END, 
                     f"¡Mejora en la precisión! El nuevo Delta X es {ga.dx/ga.dx_system:.2f} veces más pequeño\n")
             
-            # Inicializar población
             population = ga.initialize_population()
             best_solution = None
             worst_solution = None
             
             for generation in range(self.num_generaciones.get()):
+                fitness_values = [ga.fitness(ind) for ind in population]
+                best_fitness = max(fitness_values)
+                avg_fitness = sum(fitness_values) / len(fitness_values)
+                worst_fitness = min(fitness_values)
+                
+                self.fitness_history.append((best_fitness, avg_fitness, worst_fitness))
+                
                 best = ga.select_best(population)
                 new_population, n_pairs = ga.crossover(best)
                 population, n_mutations, n_bits = ga.mutate(new_population)
-                
+                population = ga.prune_population(population)
+                                
                 current_best, current_worst = ga.get_best_and_worst(population)
                 
                 if best_solution is None or ga.fitness(current_best) > ga.fitness(best_solution):
@@ -331,6 +368,9 @@ class GUI:
             )
             
             self.plot_function()
+            self.plot_fitness()
+            
+            self.window.update()
             
         except Exception as e:
             messagebox.showerror("Error", str(e))

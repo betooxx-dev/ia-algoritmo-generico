@@ -2,12 +2,14 @@ import numpy as np
 import math
 
 class GeneticAlgorithm:
-    def __init__(self, function, x_min, x_max, dx, population_size, generations, crossover_prob, mutation_prob):
+    def __init__(self, function, x_min, x_max, dx, min_population, max_population, generations, crossover_prob, mutation_prob):
         self.function = function
         self.x_min = x_min
         self.x_max = x_max
         self.dx = dx
-        self.population_size = population_size
+        self.min_population = min_population
+        self.max_population = max_population
+        self.population_size = max_population
         self.generations = generations
         self.crossover_prob = crossover_prob
         self.mutation_prob = mutation_prob
@@ -30,7 +32,7 @@ class GeneticAlgorithm:
     def select_best(self, population):
         fitness_values = [(individual, self.fitness(individual)) for individual in population]
         population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]
-        n_selected = max(2, len(population) // 2)
+        n_selected = max(self.min_population, len(population) // 2)
         return population_sorted[:n_selected]
 
     def crossover(self, population):
@@ -57,14 +59,15 @@ class GeneticAlgorithm:
             else:
                 new_population.append(population_sorted[i])
         
-        while len(new_population) > len(population):
-            new_population.pop()
-        
-        while len(new_population) < len(population):
-            idx = np.random.randint(0, len(new_population))
-            new_population.append(new_population[idx])
-        
         return new_population, len(pairs)
+
+    def prune_population(self, population):
+        if len(population) <= self.max_population:
+            return population
+            
+        fitness_values = [(individual, self.fitness(individual)) for individual in population]
+        population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]
+        return population_sorted[:self.max_population]
 
     def mutate(self, population):
         mutated_population = []
