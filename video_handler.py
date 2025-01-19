@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 class VideoHandler:
-    def __init__(self, filename="fitness_evolution.mp4", fps=10):
+    def __init__(self, filename="fitness_evolution.mp4", fps=5):
         self.filename = filename
         self.fps = fps
         self.frames = []
@@ -13,20 +13,21 @@ class VideoHandler:
         self.width = 640
         self.height = 480
         
-    def create_frame(self, x_values, fitness_values, generation, best_x=None, best_fx=None):
+    def create_frame(self, x_values, fitness_values, generation, best_x, best_fx, worst_x, worst_fx, function, x_min, x_max):
         fig = Figure(figsize=(8, 6), dpi=80)
         ax = fig.add_subplot(111)
         
-        # Ordenar los valores para el gráfico
-        sorted_pairs = sorted(zip(x_values, fitness_values))
-        x_sorted, y_sorted = zip(*sorted_pairs)
+        x_cont = np.linspace(x_min, x_max, 1000)
+        y_cont = [function(x) for x in x_cont]
+        ax.plot(x_cont, y_cont, 'b-', alpha=0.3, label='Función')
         
-        # Graficar la población actual
-        ax.scatter(x_values, fitness_values, c='blue', alpha=0.5, s=20, label='Población')
+        ax.scatter(x_values, fitness_values, c='black', alpha=0.5, s=20, label='Población')
         
-        # Si tenemos el mejor punto, lo marcamos
         if best_x is not None and best_fx is not None:
-            ax.scatter([best_x], [best_fx], c='red', s=100, label='Mejor')
+            ax.scatter([best_x], [best_fx], c='green', s=100, label='Mejor')
+            
+        if worst_x is not None and worst_fx is not None:
+            ax.scatter([worst_x], [worst_fx], c='red', s=100, label='Peor')
         
         ax.set_title(f'Generación {generation}')
         ax.set_xlabel('x')
@@ -34,8 +35,11 @@ class VideoHandler:
         ax.grid(True)
         ax.legend()
         
-        ax.set_ylim(min(fitness_values) - abs(min(fitness_values))*0.1, 
-                   max(fitness_values) + abs(max(fitness_values))*0.1)
+        all_y = fitness_values + y_cont + [best_fx, worst_fx]
+        y_min, y_max = min(all_y), max(all_y)
+        margin = (y_max - y_min) * 0.1
+        ax.set_ylim(y_min - margin, y_max + margin)
+        ax.set_xlim(x_min, x_max)
         
         canvas = FigureCanvasAgg(fig)
         canvas.draw()

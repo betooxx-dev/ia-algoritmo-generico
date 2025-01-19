@@ -81,13 +81,11 @@ class GUI:
         self.window.grid_rowconfigure(0, weight=1)
         self.window.grid_columnconfigure(0, weight=1)
         
-        # Título
         title_label = ttk.Label(main_frame, 
                                text="Algoritmo Genético - Optimización",
                                style='Title.TLabel')
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
         
-        # Frame de parámetros
         params_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         params_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
         
@@ -126,7 +124,6 @@ class GUI:
             style='Custom.TEntry')
         entry.grid(row=len(parametros)+1, column=1, padx=(15, 0), pady=8)
         
-        # Frame de resultados
         results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
         
@@ -155,7 +152,6 @@ class GUI:
         self.tree.configure(xscrollcommand=xscrollbar.set)
         xscrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
         
-        # Frame de texto de resultados
         text_frame = ttk.Frame(results_frame, style='Custom.TFrame')
         text_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(15, 0))
         
@@ -174,7 +170,6 @@ class GUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.resultado_text.configure(yscrollcommand=scrollbar.set)
         
-        # Frame de botones
         btn_frame = ttk.Frame(main_frame, style='Custom.TFrame')
         btn_frame.grid(row=2, column=0, columnspan=2, pady=20)
         
@@ -194,35 +189,28 @@ class GUI:
                                 ))
         clear_button.grid(row=0, column=1, padx=5)
         
-        # Frame de gráficas
         self.graph_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
         self.graph_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=20)
         
-        # Frame para contener ambas gráficas
         self.plots_frame = ttk.Frame(self.graph_frame, style='Custom.TFrame')
         self.plots_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Frame para la gráfica de la función
         self.function_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
         self.function_frame.grid(row=0, column=0, padx=5)
         
-        # Frame para la gráfica de fitness
         self.fitness_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
         self.fitness_frame.grid(row=0, column=1, padx=5)
         
-        # Configurar la gráfica de la función
         self.fig_function = Figure(figsize=(6, 4))
         self.ax_function = self.fig_function.add_subplot(111)
         self.canvas_function = FigureCanvasTkAgg(self.fig_function, master=self.function_frame)
         self.canvas_function.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Configurar la gráfica de fitness
         self.fig_fitness = Figure(figsize=(6, 4))
         self.ax_fitness = self.fig_fitness.add_subplot(111)
         self.canvas_fitness = FigureCanvasTkAgg(self.fig_fitness, master=self.fitness_frame)
         self.canvas_fitness.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Texto de detalles
         self.detalles_text = tk.Text(self.graph_frame,
                             height=6,
                             width=80,
@@ -343,8 +331,11 @@ class GUI:
             for generation in range(self.num_generaciones.get()):
                 x_values, fitness_values = ga.get_population_stats(population)
                 
-                current_best, _ = ga.get_best_and_worst(population)
-                current_x, current_fx = ga.decode_solution(current_best)                
+                current_best, current_worst = ga.get_best_and_worst(population)
+                current_x, current_fx = ga.decode_solution(current_best)
+                 
+                best_x, best_fx = ga.decode_solution(current_best)
+                worst_x, worst_fx = ga.decode_solution(current_worst)               
                 
                 if best_solution is None or ga.fitness(current_best) > ga.fitness(best_solution):
                     best_solution = current_best
@@ -355,7 +346,12 @@ class GUI:
                     fitness_values,
                     generation,
                     best_x,
-                    best_fx
+                    best_fx,
+                    worst_x,
+                    worst_fx,
+                    self.funcion,
+                    self.rango_min.get(),
+                    self.rango_max.get()
                 )
             
                 fitness_values = [ga.fitness(ind) for ind in population]
