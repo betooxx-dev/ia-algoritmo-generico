@@ -72,12 +72,23 @@ class GeneticAlgorithm:
         return new_population, len(pairs)
 
     def prune_population(self, population):
-        if len(population) <= self.max_population:
+        if not population:
             return population
             
-        fitness_values = [(individual, self.fitness(individual)) for individual in population]
-        population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]
-        return population_sorted[:self.max_population]
+        fitness_values = [(ind, self.fitness(ind)) for ind in population]
+        
+        seen_individuals = {}
+        unique_population = []
+        
+        for ind, fitness in sorted(fitness_values, key=lambda x: x[1], reverse=True):
+            if ind not in seen_individuals:
+                seen_individuals[ind] = True
+                unique_population.append(ind)
+        
+        if len(unique_population) <= self.max_population:
+            return unique_population
+            
+        return unique_population[:self.max_population]
 
     def mutate(self, population):
         mutated_population = []
