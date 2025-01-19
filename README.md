@@ -111,3 +111,4 @@ Funciones matemáticas soportadas:
   - Mejor individuo en verde
   - Peor individuo en rojo
 
+![Captura desde 2025-01-18 17-59-23](https://github.com/user-attachments/assets/e037786e-7095-4bf8-88ee-939c09bf09f7)
