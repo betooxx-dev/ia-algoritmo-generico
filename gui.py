@@ -25,7 +25,7 @@ class GUI:
             'button_hover': '#3498DB'   
         }
         
-        self.funcion_str = tk.StringVar(value="0.1*x*log(1 + abs(x))*cos(x)*cos(x)")
+        self.funcion_str = tk.StringVar(value="log(abs(x**3))*cos(x)*sin(x)")
         self.rango_min = tk.DoubleVar(value=5)
         self.rango_max = tk.DoubleVar(value=10)
         self.delta_x = tk.DoubleVar(value=0.1)

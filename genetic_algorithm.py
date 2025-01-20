@@ -44,51 +44,64 @@ class GeneticAlgorithm:
         population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]
         n_selected = max(self.min_population, len(population) // 2)
         return population_sorted[:n_selected]
+    
+    def make_pairs(self, population):
+        population_size = len(population)
+        half_size = population_size // 2
+        
+        selected_indices = np.random.choice(population_size, half_size, replace=False)
+        selected_population = [population[i] for i in selected_indices]
+        
+        fitness_values = [(individual, self.fitness(individual)) for individual in selected_population]
+        selected_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1])]
+        
+        pairs = []
+        for i in range(0, len(selected_sorted)-1, 2):
+            if np.random.random() <= self.crossover_prob:
+                pairs.append((selected_sorted[i], selected_sorted[i+1]))
+        
+        return pairs, [i for i in range(population_size) if i not in selected_indices]
 
     def crossover(self, population):
-        fitness_values = [(individual, self.fitness(individual)) for individual in population]
-        population_sorted = [ind for ind, _ in sorted(fitness_values, key=lambda x: x[1], reverse=True)]
-        
+        pairs, remaining_indices = self.make_pairs(population)
         new_population = []
-        pairs = []
         
-        for i in range(len(population_sorted)):
-            if np.random.random() <= self.crossover_prob:
-                j = np.random.randint(0, i+1)
-                pairs.append((i, j))
-                
-                parent1 = population_sorted[i]
-                parent2 = population_sorted[j]
-                
-                crossover_point = np.random.randint(1, self.n_bits)
-                
-                child1 = parent1[:crossover_point] + parent2[crossover_point:]
-                child2 = parent2[:crossover_point] + parent1[crossover_point:]
-                
-                new_population.extend([child1, child2])
-            else:
-                new_population.append(population_sorted[i])
+        for parent1, parent2 in pairs:
+            child1 = list(parent1)
+            child2 = list(parent2)
+            
+            for bit_pos in range(self.n_bits):
+                if bit_pos % 2 == 1:  
+                    child1[bit_pos], child2[bit_pos] = child2[bit_pos], child1[bit_pos]
+            
+            new_population.extend([''.join(child1), ''.join(child2)])
         
+        new_population.extend([population[i] for i in remaining_indices])
         return new_population, len(pairs)
 
     def prune_population(self, population):
-        if not population:
+        if len(population) <= self.max_population:
             return population
             
-        fitness_values = [(ind, self.fitness(ind)) for ind in population]
+        unique_population = list(dict.fromkeys(population))
         
-        seen_individuals = {}
-        unique_population = []
+        fitness_values = [(individual, self.fitness(individual)) for individual in unique_population]
+        sorted_population = sorted(fitness_values, key=lambda x: x[1], reverse=True)
+        best_individual = sorted_population[0][0]
         
-        for ind, fitness in sorted(fitness_values, key=lambda x: x[1], reverse=True):
-            if ind not in seen_individuals:
-                seen_individuals[ind] = True
-                unique_population.append(ind)
+        remaining_population = [ind for ind, _ in sorted_population[1:]]
         
-        if len(unique_population) <= self.max_population:
-            return unique_population
-            
-        return unique_population[:self.max_population]
+        if len(remaining_population) + 1 > self.max_population:
+            indices = np.random.choice(
+                len(remaining_population), 
+                size=self.max_population - 1, 
+                replace=False
+            )
+            remaining_population = [remaining_population[i] for i in indices]
+        
+        final_population = [best_individual] + remaining_population
+        
+        return final_population
 
     def mutate(self, population):
         mutated_population = []
@@ -96,20 +109,21 @@ class GeneticAlgorithm:
         total_mutated_bits = 0
         
         for individual in population:
-            mutated_individual = list(individual)
+            individual_genes = list(individual)
             individual_mutated = False
             
-            if np.random.random() <= self.mutation_prob:
-                for i in range(self.n_bits):
-                    if np.random.random() <= self.bit_mutation_prob:
-                        mutated_individual[i] = '1' if mutated_individual[i] == '0' else '0'
+            if np.random.random() <= self.mutation_prob: 
+                for i in range(self.n_bits):  
+                    if np.random.random() <= self.bit_mutation_prob:  
+                        swap_position = np.random.randint(0, self.n_bits)
+                        individual_genes[i], individual_genes[swap_position] = individual_genes[swap_position], individual_genes[i]
                         total_mutated_bits += 1
                         individual_mutated = True
                 
                 if individual_mutated:
                     total_mutations += 1
             
-            mutated_population.append(''.join(mutated_individual))
+            mutated_population.append(''.join(individual_genes))
         
         return mutated_population, total_mutations, total_mutated_bits
 
