@@ -1,19 +1,17 @@
-from genetic_algorithm import GeneticAlgorithm
-from utils import compile_function, validate_parameters
-from video_handler import VideoHandler
+from linear_regression import LinearRegressionGA
+from file_handler import load_data
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import numpy as np
 from ttkthemes import ThemedTk
-import math
 
 class GUI:
     def __init__(self):
         self.window = ThemedTk(theme="arc")
-        self.window.title("Algoritmo Genético - Optimización")
+        self.window.title("Regresión Lineal con Algoritmos Genéticos")
         self.window.geometry("1350x1400")
         
         self.colors = {
@@ -25,382 +23,238 @@ class GUI:
             'button_hover': '#3498DB'   
         }
         
-        self.funcion_str = tk.StringVar(value="0.1*x*log(1 + abs(x))*cos(x)*cos(x)")
-        self.rango_min = tk.DoubleVar(value=5)
-        self.rango_max = tk.DoubleVar(value=10)
-        self.delta_x = tk.DoubleVar(value=0.1)
-        self.prob_cruza = tk.DoubleVar(value=0.8)
-        self.prob_mutacion = tk.DoubleVar(value=0.6)
-        self.prob_mutacion_bits = tk.DoubleVar(value=0.1)  
-        self.poblacion_min = tk.IntVar(value=50)  
         self.poblacion_max = tk.IntVar(value=100)  
         self.num_generaciones = tk.IntVar(value=50)
+        self.prob_mutacion = tk.DoubleVar(value=0.1)
         
-        self.funcion = None
-        self.n_puntos = None
-        self.n_bits = None
-        self.x_min = None
-        self.x_max = None
-        self.dx = None
-        self.dx_sistema = None 
+        self.data_file_path = tk.StringVar()
+        self.X_data = []
+        self.Y_data = []
+        self.beta_history = []  # Para almacenar la evolución de betas
         
-        self.styles()
-        self.start_interface()
+        self.setup_interface()
         
-    def styles(self):
-        style = ttk.Style()
+    def setup_interface(self):
+        main_frame = ttk.Frame(self.window)
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        style.configure('Custom.TFrame', background=self.colors['frame_bg'])
+        # Control Frame
+        control_frame = ttk.Frame(main_frame)
+        control_frame.pack(fill='x', padx=10, pady=5)
         
-        style.configure('Custom.TLabel',
-                       background=self.colors['frame_bg'],
-                       foreground=self.colors['text'],
-                       font=('Segoe UI', 10))
+        ttk.Label(control_frame, text="Archivo de datos:").pack(side='left', padx=5)
+        ttk.Entry(control_frame, textvariable=self.data_file_path, width=50).pack(side='left', padx=5)
+        ttk.Button(control_frame, text="Buscar", command=self.load_data_file).pack(side='left', padx=5)
         
-        style.configure('Title.TLabel',
-                       background=self.colors['frame_bg'],
-                       foreground=self.colors['accent'],
-                       font=('Segoe UI', 14, 'bold'))
+        # Parameters Frame
+        params_frame = ttk.LabelFrame(main_frame, text="Parámetros de Regresión")
+        params_frame.pack(fill='x', padx=10, pady=5)
         
-        style.configure('Custom.TEntry', 
-                       fieldbackground='white',
-                       borderwidth=1)
+        ttk.Label(params_frame, text="Población:").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Entry(params_frame, textvariable=self.poblacion_max, width=10).grid(row=0, column=1, padx=5, pady=5)
         
-        style.configure('Custom.TButton',
-                       background=self.colors['button'],
-                       foreground='black',
-                       padding=(20, 10),
-                       font=('Segoe UI', 10, 'bold'))
+        ttk.Label(params_frame, text="Generaciones:").grid(row=0, column=2, padx=5, pady=5)
+        ttk.Entry(params_frame, textvariable=self.num_generaciones, width=10).grid(row=0, column=3, padx=5, pady=5)
         
-    def start_interface(self):
-        self.window.configure(background=self.colors['bg'])
+        ttk.Label(params_frame, text="Tasa de mutación:").grid(row=0, column=4, padx=5, pady=5)
+        ttk.Entry(params_frame, textvariable=self.prob_mutacion, width=10).grid(row=0, column=5, padx=5, pady=5)
         
-        main_frame = ttk.Frame(self.window, style='Custom.TFrame', padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=20, pady=20)
+        ttk.Button(params_frame, text="Iniciar Regresión", command=self.run_regression).grid(row=0, column=6, padx=20, pady=5)
         
-        self.window.grid_rowconfigure(0, weight=1)
-        self.window.grid_columnconfigure(0, weight=1)
+        # Plots Frame
+        plots_frame = ttk.Frame(main_frame)
+        plots_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
-        title_label = ttk.Label(main_frame, 
-                               text="Algoritmo Genético - Optimización",
-                               style='Title.TLabel')
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        # Gráfica de regresión
+        self.regression_fig = Figure(figsize=(6, 4))
+        self.regression_ax = self.regression_fig.add_subplot(111)
+        self.regression_canvas = FigureCanvasTkAgg(self.regression_fig, master=plots_frame)
+        self.regression_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
         
-        params_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
-        params_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
+        # Gráfica de evolución de betas
+        self.betas_fig = Figure(figsize=(6, 4))
+        self.betas_ax = self.betas_fig.add_subplot(111)
+        self.betas_canvas = FigureCanvasTkAgg(self.betas_fig, master=plots_frame)
+        self.betas_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
         
-        ttk.Label(params_frame, 
-                 text="Parámetros de Optimización",
-                 style='Title.TLabel').grid(row=0, column=0, columnspan=2, pady=(0, 15))
+        # Gráfica de Y deseada vs Y calculada
+        self.comparison_fig = Figure(figsize=(12, 4))
+        self.comparison_ax = self.comparison_fig.add_subplot(111)
+        self.comparison_canvas = FigureCanvasTkAgg(self.comparison_fig, master=plots_frame)
+        self.comparison_canvas.get_tk_widget().grid(row=1, column=0, columnspan=2, padx=5, pady=5)
         
-        parametros = [
-            ("Rango mínimo:", self.rango_min),
-            ("Rango máximo:", self.rango_max),
-            ("Delta X (margen de error):", self.delta_x),
-            ("Probabilidad de cruza:", self.prob_cruza),
-            ("Probabilidad de mutación:", self.prob_mutacion),
-            ("Probabilidad de mutación de bits:", self.prob_mutacion_bits),  
-            ("Población mínima:", self.poblacion_min),
-            ("Población máxima:", self.poblacion_max),
-            ("Número de generaciones:", self.num_generaciones)
-        ]
-        
-        for i, (label_text, variable) in enumerate(parametros):
-            ttk.Label(params_frame, 
-                text=label_text,
-                style='Custom.TLabel').grid(row=i+1, column=0, sticky=tk.W, pady=8)
-            entry = ttk.Entry(params_frame,
-                    textvariable=variable,
-                    width=20,
-                    style='Custom.TEntry')
-            entry.grid(row=i+1, column=1, padx=(15, 0), pady=8)
-        
-        ttk.Label(params_frame, 
-            text="Función a optimizar:",
-            style='Custom.TLabel').grid(row=len(parametros)+1, column=0, sticky=tk.W, pady=8)
-        entry = ttk.Entry(params_frame,
-         textvariable=self.funcion_str,
-            width=20,
-            style='Custom.TEntry')
-        entry.grid(row=len(parametros)+1, column=1, padx=(15, 0), pady=8)
-        
-        results_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
-        results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
-        
-        ttk.Label(results_frame,
-                text="Evolución de Generaciones",
-                style='Title.TLabel').grid(row=0, column=0, pady=(0, 15))
-        
-        self.tree = ttk.Treeview(results_frame, columns=("gen", "mejor_x", "mejor_fx", "peor_x", "peor_fx"), 
-                                show="headings", height=15)
-        
-        self.tree.heading("gen", text="Generación")
-        self.tree.heading("mejor_x", text="Mejor X")
-        self.tree.heading("mejor_fx", text="Mejor f(x)")
-        self.tree.heading("peor_x", text="Peor X")
-        self.tree.heading("peor_fx", text="Peor f(x)")
-        
-        self.tree.column("gen", width=80)
-        self.tree.column("mejor_x", width=100)
-        self.tree.column("mejor_fx", width=100)
-        self.tree.column("peor_x", width=100)
-        self.tree.column("peor_fx", width=100)
-        
-        self.tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        xscrollbar = ttk.Scrollbar(results_frame, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(xscrollcommand=xscrollbar.set)
-        xscrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
-        
-        text_frame = ttk.Frame(results_frame, style='Custom.TFrame')
-        text_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(15, 0))
-        
-        self.resultado_text = tk.Text(text_frame,
-                                    height=8,
-                                    width=40,
-                                    font=('Consolas', 10),
-                                    bg='white',
-                                    fg=self.colors['text'],
-                                    wrap=tk.WORD,
-                                    borderwidth=1,
-                                    relief="solid")
-        self.resultado_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=self.resultado_text.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.resultado_text.configure(yscrollcommand=scrollbar.set)
-        
-        btn_frame = ttk.Frame(main_frame, style='Custom.TFrame')
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=20)
-        
-        start_button = ttk.Button(btn_frame,
-                                text="Iniciar Optimización",
-                                style='Custom.TButton',
-                                command=self.iniciar_optimizacion)
-        start_button.grid(row=0, column=0, padx=5)
-        
-        clear_button = ttk.Button(btn_frame,
-                                text="Limpiar Resultados",
-                                style='Custom.TButton',
-                                command=lambda:(
-                                    self.resultado_text.delete(1.0, tk.END),
-                                    self.detalles_text.delete(1.0, tk.END),
-                                    [self.tree.delete(item) for item in self.tree.get_children()]
-                                ))
-        clear_button.grid(row=0, column=1, padx=5)
-        
-        self.graph_frame = ttk.Frame(main_frame, style='Custom.TFrame', padding="15")
-        self.graph_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=20)
-        
-        self.plots_frame = ttk.Frame(self.graph_frame, style='Custom.TFrame')
-        self.plots_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.function_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
-        self.function_frame.grid(row=0, column=0, padx=5)
-        
-        self.fitness_frame = ttk.Frame(self.plots_frame, style='Custom.TFrame')
-        self.fitness_frame.grid(row=0, column=1, padx=5)
-        
-        self.fig_function = Figure(figsize=(6, 4))
-        self.ax_function = self.fig_function.add_subplot(111)
-        self.canvas_function = FigureCanvasTkAgg(self.fig_function, master=self.function_frame)
-        self.canvas_function.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        self.fig_fitness = Figure(figsize=(6, 4))
-        self.ax_fitness = self.fig_fitness.add_subplot(111)
-        self.canvas_fitness = FigureCanvasTkAgg(self.fig_fitness, master=self.fitness_frame)
-        self.canvas_fitness.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        self.detalles_text = tk.Text(self.graph_frame,
-                            height=6,
-                            width=80,
-                            font=('Consolas', 10),
-                            bg='white',
-                            fg=self.colors['text'],
-                            wrap=tk.WORD,
-                            borderwidth=1,
-                            relief="solid")
-        self.detalles_text.pack(fill=tk.X, expand=True, pady=(10, 0))
+        # Results Text
+        self.results_text = tk.Text(main_frame, height=5, width=50)
+        self.results_text.pack(fill='x', padx=10, pady=5)
     
-    def plot_function(self):
-        self.ax_function.clear()
-        
-        x = np.linspace(self.rango_min.get(), self.rango_max.get(), 1000)
-        y = np.array([self.funcion(xi) for xi in x])
-        
-        self.ax_function.plot(x, y, 'b-', label='f(x)')
-        
-        if self.mejor_x is not None and self.peor_x is not None:
-            self.ax_function.plot(self.mejor_x, self.mejor_y, 'go', label='Máximo', markersize=10)
-            self.ax_function.plot(self.peor_x, self.peor_y, 'ro', label='Mínimo', markersize=10)
-        
-        self.ax_function.set_title('Función y Puntos Óptimos')
-        self.ax_function.set_xlabel('x')
-        self.ax_function.set_ylabel('f(x)')
-        self.ax_function.grid(True)
-        self.ax_function.legend()
-        
-        self.canvas_function.draw()
+    def load_data_file(self):
+        filename = filedialog.askopenfilename(
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("Excel files", "*.xlsx;*.xls")
+            ]
+        )
+        if filename:
+            try:
+                self.data_file_path.set(filename)
+                self.X_data, self.Y_data = load_data(filename)
+                self.plot_data()
+                messagebox.showinfo("Éxito", "Datos cargados correctamente")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
     
-    def plot_fitness(self):
-        self.ax_fitness.clear()
+    def plot_data(self):
+        print("Iniciando plot_data")
+        self.regression_ax.clear()
         
-        generations = list(range(len(self.fitness_history)))
-        best_fitness = [f[0] for f in self.fitness_history]
-        avg_fitness = [f[1] for f in self.fitness_history]
-        worst_fitness = [f[2] for f in self.fitness_history]
+        # Obtenemos el número de variables X
+        n_features = self.X_data.shape[1]
         
-        self.ax_fitness.plot(generations, best_fitness, 'g-', label='Mejor Fitness')
-        self.ax_fitness.plot(generations, avg_fitness, 'b-', label='Fitness Promedio')
-        self.ax_fitness.plot(generations, worst_fitness, 'r-', label='Peor Fitness')
+        # Creamos una figura con subplots para cada variable X
+        for i in range(n_features):
+            # Creamos un scatter plot para cada variable X vs Y
+            self.regression_ax.scatter(self.X_data[:, i], 
+                                    self.Y_data, 
+                                    color=f'C{i}', 
+                                    alpha=0.5, 
+                                    label=f'X{i+1} vs Y')
         
-        self.ax_fitness.set_title('Evolución del Fitness')
-        self.ax_fitness.set_xlabel('Generación')
-        self.ax_fitness.set_ylabel('Valor de Fitness')
-        self.ax_fitness.grid(True)
-        self.ax_fitness.legend()
-        
-        self.canvas_fitness.draw()
-        
-    def mostrar_progreso(self, generacion, mejor_solucion, peor_solucion, ga):
-        mejor_x, mejor_y = ga.decode_solution(mejor_solucion)
-        peor_x, peor_y = ga.decode_solution(peor_solucion)
-        
-        self.tree.insert("", "end", values=(
-            generacion,
-            f"{mejor_x:.4f}",
-            f"{mejor_y:.4f}",
-            f"{peor_x:.4f}",
-            f"{peor_y:.4f}"
-        ))
-        
-        self.tree.yview_moveto(1)
+        self.regression_ax.set_xlabel('Variables X')
+        self.regression_ax.set_ylabel('Y')
+        self.regression_ax.set_title('Datos de Regresión')
+        self.regression_ax.grid(True)
+        self.regression_ax.legend()
+        self.regression_canvas.draw()
     
-    def iniciar_optimizacion(self):
+    def run_regression(self):
+        if not len(self.X_data) or not len(self.Y_data):
+            messagebox.showerror("Error", "Por favor, cargue los datos primero")
+            return
+                
         try:
-            for item in self.tree.get_children():
-                self.tree.delete(item)
-            self.resultado_text.delete(1.0, tk.END)
-            self.detalles_text.delete(1.0, tk.END)
-            self.fitness_history = []
-
-            validate_parameters(
-                self.rango_min.get(),
-                self.rango_max.get(),
-                self.delta_x.get(),
-                self.prob_cruza.get(),
-                self.prob_mutacion.get(),
-                self.prob_mutacion_bits.get(),  
-                self.poblacion_min.get(),  
-                self.poblacion_max.get(),  
-                self.num_generaciones.get()
+            print(f"Dimensiones de X_data: {self.X_data.shape}")
+            print(f"Dimensiones de Y_data: {self.Y_data.shape}")
+            
+            ga = LinearRegressionGA(
+                population_size=self.poblacion_max.get(),
+                generations=self.num_generaciones.get(),
+                mutation_rate=self.prob_mutacion.get()
             )
             
-            self.funcion = compile_function(self.funcion_str.get())
-            
-            ga = GeneticAlgorithm(
-                self.funcion,
-                self.rango_min.get(),
-                self.rango_max.get(),
-                self.delta_x.get(),
-                self.poblacion_min.get(),  
-                self.poblacion_max.get(),  
-                self.num_generaciones.get(),
-                self.prob_cruza.get(),
-                self.prob_mutacion.get(),
-                self.prob_mutacion_bits.get()  
-            )
-            
-            self.resultado_text.insert(tk.END, f"Parámetros de codificación:\n")
-            self.resultado_text.insert(tk.END, f"Número de puntos originales: {ga.n_points}\n")
-            self.resultado_text.insert(tk.END, f"Número de bits necesarios: {ga.n_bits}\n")
-            self.resultado_text.insert(tk.END, f"Número total de puntos posibles: {2**ga.n_bits}\n")
-            self.resultado_text.insert(tk.END, f"Delta X original: {ga.dx}\n")
-            self.resultado_text.insert(tk.END, f"Delta X del sistema: {ga.dx_system}\n")
-            
-            if ga.dx_system < ga.dx:
-                self.resultado_text.insert(tk.END, 
-                    f"¡Mejora en la precisión! El nuevo Delta X es {ga.dx/ga.dx_system:.2f} veces más pequeño\n")
-            
-            video_handler = VideoHandler()
-            
-            population = ga.initialize_population()
+            # Inicializar población con el número correcto de características
+            print(f"Inicializando población con {self.X_data.shape[1]} características")
+            population = ga.initialize_population(self.X_data.shape[1])
             best_solution = None
-            worst_solution = None
+            best_fitness = float('-inf')
+            self.beta_history = []
             
-            for generation in range(self.num_generaciones.get()):
-                x_values, fitness_values = ga.get_population_stats(population)
+            for generation in range(ga.generations):
+                fitness_values = [(ind, ga.fitness(ind, self.X_data, self.Y_data)) 
+                                for ind in population]
                 
-                current_best, current_worst = ga.get_best_and_worst(population)
-                current_x, current_fx = ga.decode_solution(current_best)
-                 
-                best_x, best_fx = ga.decode_solution(current_best)
-                worst_x, worst_fx = ga.decode_solution(current_worst)               
+                current_best = max(fitness_values, key=lambda x: x[1])[0]
+                current_fitness = ga.fitness(current_best, self.X_data, self.Y_data)
                 
-                if best_solution is None or ga.fitness(current_best) > ga.fitness(best_solution):
-                    best_solution = current_best
-                    best_x, best_fx = current_x, current_fx
-            
-                video_handler.create_frame(
-                    x_values,
-                    fitness_values,
-                    generation,
-                    best_x,
-                    best_fx,
-                    worst_x,
-                    worst_fx,
-                    self.funcion,
-                    self.rango_min.get(),
-                    self.rango_max.get()
-                )
-            
-                fitness_values = [ga.fitness(ind) for ind in population]
-                best_fitness = max(fitness_values)
-                avg_fitness = sum(fitness_values) / len(fitness_values)
-                worst_fitness = min(fitness_values)
+                self.beta_history.append({
+                    'coefs': current_best['coefs'].copy(),
+                    'b': current_best['b']
+                })
                 
-                self.fitness_history.append((best_fitness, avg_fitness, worst_fitness))
+                if current_fitness > best_fitness:
+                    best_fitness = current_fitness
+                    best_solution = current_best.copy()
                 
-                best = ga.select_best(population)
-                new_population, n_pairs = ga.crossover(best)
-                population, n_mutations, n_bits = ga.mutate(new_population)
-                population = ga.prune_population(population)
-                                
-                current_best, current_worst = ga.get_best_and_worst(population)
+                selected = [ind for ind, _ in sorted(fitness_values, 
+                        key=lambda x: x[1], reverse=True)[:ga.population_size//2]]
                 
-                if best_solution is None or ga.fitness(current_best) > ga.fitness(best_solution):
-                    best_solution = current_best
+                new_population = []
+                while len(new_population) < ga.population_size:
+                    parent1 = np.random.choice(selected)
+                    parent2 = np.random.choice(selected)
+                    child = ga.crossover(parent1, parent2)
+                    child = ga.mutate(child)
+                    new_population.append(child)
                 
-                if worst_solution is None or ga.fitness(current_worst) < ga.fitness(worst_solution):
-                    worst_solution = current_worst
-                
-                self.mostrar_progreso(generation, current_best, current_worst, ga)
+                population = new_population
             
-            self.mejor_x, self.mejor_y = ga.decode_solution(best_solution)
-            self.peor_x, self.peor_y = ga.decode_solution(worst_solution)
-            
-            self.detalles_text.insert(tk.END, 
-                f"Mejor solución encontrada:\n"
-                f"X = {self.mejor_x:.6f}\n"
-                f"f(x) = {self.mejor_y:.6f}\n"
-                f"Número de bits: {ga.n_bits}\n"
-                f"Representación binaria: {best_solution}\n"
-            )
-            
-            video_handler.save_video()
-            
-            self.plot_function()
-            self.plot_fitness()
-            
-            self.window.update()
+            self.plot_regression_result(best_solution)
             
         except Exception as e:
             messagebox.showerror("Error", str(e))
-
+    
+    def plot_regression_result(self, solution):
+        print("Iniciando plot_regression_result")
+        print(f"Dimensiones de X_data: {self.X_data.shape}")
+        print(f"Dimensiones de Y_data: {self.Y_data.shape}")
+        print(f"Solución: {solution}")
+        
+        # Plot regresión - ahora mostramos predicciones vs valores reales
+        self.regression_ax.clear()
+        Y_pred = np.dot(self.X_data, solution['coefs']) + solution['b']
+        self.regression_ax.scatter(self.Y_data, Y_pred, color='blue', alpha=0.5, label='Predicciones vs Real')
+        
+        # Línea de referencia y=x
+        min_val = min(min(self.Y_data), min(Y_pred))
+        max_val = max(max(self.Y_data), max(Y_pred))
+        self.regression_ax.plot([min_val, max_val], [min_val, max_val], 'r--', label='Línea ideal')
+        
+        self.regression_ax.set_xlabel('Valores Reales')
+        self.regression_ax.set_ylabel('Predicciones')
+        self.regression_ax.set_title('Predicciones vs Valores Reales')
+        self.regression_ax.grid(True)
+        self.regression_ax.legend()
+        self.regression_canvas.draw()
+        
+        # Plot evolución de betas
+        self.betas_ax.clear()
+        generations = range(len(self.beta_history))
+        
+        # Graficar cada coeficiente
+        for i in range(self.X_data.shape[1]):
+            coef_values = [b['coefs'][i] for b in self.beta_history]
+            self.betas_ax.plot(generations, coef_values, label=f'X{i+1}')
+        
+        # Graficar intercepto
+        b_values = [b['b'] for b in self.beta_history]
+        self.betas_ax.plot(generations, b_values, label='b', linestyle='--')
+        
+        self.betas_ax.set_xlabel('Generación')
+        self.betas_ax.set_ylabel('Valor')
+        self.betas_ax.set_title('Evolución de Coeficientes')
+        self.betas_ax.grid(True)
+        self.betas_ax.legend()
+        self.betas_canvas.draw()
+        
+        # Plot Y deseada vs Y calculada
+        self.comparison_ax.clear()
+        Y_calc = np.dot(self.X_data, solution['coefs']) + solution['b']
+        
+        self.comparison_ax.plot(self.Y_data, label='Y deseada', color='blue')
+        self.comparison_ax.plot(Y_calc, label='Y calculada', color='red')
+        self.comparison_ax.set_xlabel('Índice de muestra')
+        self.comparison_ax.set_ylabel('Valor')
+        self.comparison_ax.set_title('Comparación Y deseada vs Y calculada')
+        self.comparison_ax.grid(True)
+        self.comparison_ax.legend()
+        self.comparison_canvas.draw()
+        
+        # Mostrar resultados numéricos
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.insert(tk.END, f"Resultados de la regresión:\n")
+        for i, coef in enumerate(solution['coefs']):
+            self.results_text.insert(tk.END, f"Coeficiente X{i+1}: {coef:.4f}\n")
+        self.results_text.insert(tk.END, f"Intercepto (b): {solution['b']:.4f}\n")
+        
+        # Construir ecuación
+        equation = "y = "
+        for i, coef in enumerate(solution['coefs']):
+            equation += f"{coef:.4f}*X{i+1} + "
+        equation += f"{solution['b']:.4f}"
+        self.results_text.insert(tk.END, f"Ecuación: {equation}")
+        
     def start(self):
         self.window.mainloop()
 
 if __name__ == "__main__":
     app = GUI()
     app.start()
-
