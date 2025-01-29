@@ -30,7 +30,7 @@ class GUI:
         self.data_file_path = tk.StringVar()
         self.X_data = []
         self.Y_data = []
-        self.beta_history = []  # Para almacenar la evolución de betas
+        self.beta_history = []  
         
         self.setup_interface()
         
@@ -65,23 +65,37 @@ class GUI:
         plots_frame = ttk.Frame(main_frame)
         plots_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
+        # Frame para las gráficas superiores
+        top_plots_frame = ttk.Frame(plots_frame)
+        top_plots_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+        
+        # Gráfica de datos inicial
+        self.data_fig = Figure(figsize=(6, 4))
+        self.data_ax = self.data_fig.add_subplot(111)
+        self.data_canvas = FigureCanvasTkAgg(self.data_fig, master=top_plots_frame)
+        self.data_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
+        
         # Gráfica de regresión
         self.regression_fig = Figure(figsize=(6, 4))
         self.regression_ax = self.regression_fig.add_subplot(111)
-        self.regression_canvas = FigureCanvasTkAgg(self.regression_fig, master=plots_frame)
-        self.regression_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
+        self.regression_canvas = FigureCanvasTkAgg(self.regression_fig, master=top_plots_frame)
+        self.regression_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
+        
+        # Frame para las gráficas inferiores
+        bottom_plots_frame = ttk.Frame(plots_frame)
+        bottom_plots_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
         
         # Gráfica de evolución de betas
         self.betas_fig = Figure(figsize=(6, 4))
         self.betas_ax = self.betas_fig.add_subplot(111)
-        self.betas_canvas = FigureCanvasTkAgg(self.betas_fig, master=plots_frame)
-        self.betas_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
+        self.betas_canvas = FigureCanvasTkAgg(self.betas_fig, master=bottom_plots_frame)
+        self.betas_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
         
         # Gráfica de Y deseada vs Y calculada
-        self.comparison_fig = Figure(figsize=(12, 4))
+        self.comparison_fig = Figure(figsize=(6, 4))
         self.comparison_ax = self.comparison_fig.add_subplot(111)
-        self.comparison_canvas = FigureCanvasTkAgg(self.comparison_fig, master=plots_frame)
-        self.comparison_canvas.get_tk_widget().grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+        self.comparison_canvas = FigureCanvasTkAgg(self.comparison_fig, master=bottom_plots_frame)
+        self.comparison_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
         
         # Results Text
         self.results_text = tk.Text(main_frame, height=5, width=50)
@@ -104,27 +118,28 @@ class GUI:
                 messagebox.showerror("Error", str(e))
     
     def plot_data(self):
-        print("Iniciando plot_data")
-        self.regression_ax.clear()
-        
-        # Obtenemos el número de variables X
+        self.data_ax.clear()
         n_features = self.X_data.shape[1]
         
-        # Creamos una figura con subplots para cada variable X
-        for i in range(n_features):
-            # Creamos un scatter plot para cada variable X vs Y
-            self.regression_ax.scatter(self.X_data[:, i], 
-                                    self.Y_data, 
-                                    color=f'C{i}', 
-                                    alpha=0.5, 
-                                    label=f'X{i+1} vs Y')
+        # Almacenar las líneas de regresión para cada variable
+        self.regression_lines = []
         
-        self.regression_ax.set_xlabel('Variables X')
-        self.regression_ax.set_ylabel('Y')
-        self.regression_ax.set_title('Datos de Regresión')
-        self.regression_ax.grid(True)
-        self.regression_ax.legend()
-        self.regression_canvas.draw()
+        for i in range(n_features):
+            self.data_ax.scatter(self.X_data[:, i], 
+                                self.Y_data, 
+                                color=f'C{i}', 
+                                alpha=0.5, 
+                                label=f'X{i+1} vs Y')
+            # Inicializar una línea vacía para cada variable
+            line, = self.data_ax.plot([], [], f'C{i}--', label=f'Regresión X{i+1}')
+            self.regression_lines.append(line)
+        
+        self.data_ax.set_xlabel('Variables X')
+        self.data_ax.set_ylabel('Y')
+        self.data_ax.set_title('Datos Originales y Regresión')
+        self.data_ax.grid(True)
+        self.data_ax.legend()
+        self.data_canvas.draw()
     
     def run_regression(self):
         if not len(self.X_data) or not len(self.Y_data):
@@ -187,6 +202,14 @@ class GUI:
         print(f"Dimensiones de X_data: {self.X_data.shape}")
         print(f"Dimensiones de Y_data: {self.Y_data.shape}")
         print(f"Solución: {solution}")
+        
+        n_features = self.X_data.shape[1]
+        for i in range(n_features):
+            x_sorted = np.sort(self.X_data[:, i])
+            y_pred = solution['coefs'][i] * x_sorted + solution['b']
+            self.regression_lines[i].set_data(x_sorted, y_pred)
+        
+        self.data_canvas.draw()
         
         # Plot regresión - ahora mostramos predicciones vs valores reales
         self.regression_ax.clear()

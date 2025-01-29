@@ -7,7 +7,13 @@ class LinearRegressionGA:
         self.generations = generations
         self.mutation_rate = mutation_rate
         self.n_features = None
+        self.elite_size = int(population_size * 0.1)
         
+    def normalize_data(self, X: np.ndarray) -> tuple:
+        self.X_mean = np.mean(X, axis=0)
+        self.X_std = np.std(X, axis=0)
+        return (X - self.X_mean) / (self.X_std + 1e-8)
+    
     def initialize_population(self, n_features: int) -> List[dict]:
         self.n_features = n_features
         population = []
@@ -22,7 +28,8 @@ class LinearRegressionGA:
     def fitness(self, individual: dict, X: np.ndarray, Y: np.ndarray) -> float:
         predictions = np.dot(X, individual['coefs']) + individual['b']
         mse = np.mean((predictions - Y) ** 2)
-        return -mse
+        r2 = 1 - (np.sum((Y - predictions) ** 2) / np.sum((Y - np.mean(Y)) ** 2))
+        return -mse * (0.8 + 0.2 * r2)
         
     def crossover(self, parent1: dict, parent2: dict) -> dict:
         alpha = np.random.random()
@@ -39,14 +46,16 @@ class LinearRegressionGA:
         return individual
         
     def evolve(self, X: np.ndarray, Y: np.ndarray):
+        X_norm = self.normalize_data(X)
         population = self.initialize_population(X.shape[1])
         best_solution = None
         best_fitness = float('-inf')
         
         for _ in range(self.generations):
-            fitness_values = [(ind, self.fitness(ind, X, Y)) for ind in population]
+            fitness_values = [(ind, self.fitness(ind, X_norm, Y)) for ind in population]
             fitness_values.sort(key=lambda x: x[1], reverse=True)
             
+            elites = [ind for ind, _ in fitness_values[:self.elite_size]]
             current_best = fitness_values[0][0]
             current_fitness = fitness_values[0][1]
             
@@ -56,7 +65,7 @@ class LinearRegressionGA:
             
             selected = [ind for ind, _ in fitness_values[:self.population_size//2]]
             
-            new_population = []
+            new_population = elites.copy()
             while len(new_population) < self.population_size:
                 parent1 = np.random.choice(selected)
                 parent2 = np.random.choice(selected)

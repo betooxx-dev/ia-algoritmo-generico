@@ -14,7 +14,6 @@ def load_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     else:
         raise ValueError("Formato de archivo no soportado. Use CSV o XLSX")
     
-    # Identificar columnas X y Y
     y_column = 'Y'
     x_columns = [col for col in data.columns if col.startswith('X')]
     
