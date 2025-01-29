@@ -12,7 +12,7 @@ class GUI:
     def __init__(self):
         self.window = ThemedTk(theme="arc")
         self.window.title("Regresión Lineal con Algoritmos Genéticos")
-        self.window.geometry("1350x1400")
+        self.window.geometry("1350x1200")
         
         self.colors = {
             'bg': '#F5F5F5',           
@@ -31,6 +31,7 @@ class GUI:
         self.X_data = []
         self.Y_data = []
         self.beta_history = []  
+        self.fitness_history = []
         
         self.setup_interface()
         
@@ -61,41 +62,47 @@ class GUI:
         
         ttk.Button(params_frame, text="Iniciar Regresión", command=self.run_regression).grid(row=0, column=6, padx=20, pady=5)
         
-        # Plots Frame
+       # Plots Frame
         plots_frame = ttk.Frame(main_frame)
         plots_frame.pack(fill='both', expand=True, padx=10, pady=5)
-        
+
         # Frame para las gráficas superiores
         top_plots_frame = ttk.Frame(plots_frame)
         top_plots_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
-        
+
         # Gráfica de datos inicial
         self.data_fig = Figure(figsize=(6, 4))
         self.data_ax = self.data_fig.add_subplot(111)
         self.data_canvas = FigureCanvasTkAgg(self.data_fig, master=top_plots_frame)
         self.data_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
-        
+
         # Gráfica de regresión
         self.regression_fig = Figure(figsize=(6, 4))
         self.regression_ax = self.regression_fig.add_subplot(111)
         self.regression_canvas = FigureCanvasTkAgg(self.regression_fig, master=top_plots_frame)
         self.regression_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
-        
-        # Frame para las gráficas inferiores
+
+        # Frame para las gráficas inferiores (solo crear una vez)
         bottom_plots_frame = ttk.Frame(plots_frame)
-        bottom_plots_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
-        
+        bottom_plots_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
+
         # Gráfica de evolución de betas
-        self.betas_fig = Figure(figsize=(6, 4))
+        self.betas_fig = Figure(figsize=(4, 4))
         self.betas_ax = self.betas_fig.add_subplot(111)
         self.betas_canvas = FigureCanvasTkAgg(self.betas_fig, master=bottom_plots_frame)
         self.betas_canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5)
-        
+
+        # Gráfica de evolución del fitness
+        self.fitness_fig = Figure(figsize=(4, 4))
+        self.fitness_ax = self.fitness_fig.add_subplot(111)
+        self.fitness_canvas = FigureCanvasTkAgg(self.fitness_fig, master=bottom_plots_frame)
+        self.fitness_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
+
         # Gráfica de Y deseada vs Y calculada
-        self.comparison_fig = Figure(figsize=(6, 4))
+        self.comparison_fig = Figure(figsize=(4, 4))
         self.comparison_ax = self.comparison_fig.add_subplot(111)
         self.comparison_canvas = FigureCanvasTkAgg(self.comparison_fig, master=bottom_plots_frame)
-        self.comparison_canvas.get_tk_widget().grid(row=0, column=1, padx=5, pady=5)
+        self.comparison_canvas.get_tk_widget().grid(row=0, column=2, padx=5, pady=5)
         
         # Results Text
         self.results_text = tk.Text(main_frame, height=5, width=50)
@@ -162,6 +169,7 @@ class GUI:
             best_solution = None
             best_fitness = float('-inf')
             self.beta_history = []
+            self.fitness_history = []
             
             for generation in range(ga.generations):
                 fitness_values = [(ind, ga.fitness(ind, self.X_data, self.Y_data)) 
@@ -174,6 +182,8 @@ class GUI:
                     'coefs': current_best['coefs'].copy(),
                     'b': current_best['b']
                 })
+                
+                self.fitness_history.append(current_fitness)
                 
                 if current_fitness > best_fitness:
                     best_fitness = current_fitness
@@ -260,6 +270,16 @@ class GUI:
         self.comparison_ax.grid(True)
         self.comparison_ax.legend()
         self.comparison_canvas.draw()
+        
+        self.fitness_ax.clear()
+        generations = range(len(self.fitness_history))
+        self.fitness_ax.plot(generations, self.fitness_history, 'g-', label='Mejor Fitness')
+        self.fitness_ax.set_xlabel('Generación')
+        self.fitness_ax.set_ylabel('Fitness')
+        self.fitness_ax.set_title('Evolución del Fitness')
+        self.fitness_ax.grid(True)
+        self.fitness_ax.legend()
+        self.fitness_canvas.draw()
         
         # Mostrar resultados numéricos
         self.results_text.delete(1.0, tk.END)
